@@ -10,5 +10,5 @@
 
 ## 注意事项<br/>
 1.请事先pip requests,json<br/>
-3.出bug提交issues，不定时会看<br/>
-4.永久不会更新<br/>
+2.出bug提交issues，不定时会看<br/>
+3.永久不会更新<br/>
