@@ -253,4 +253,4 @@ for j in range(0,len(course_list['courseId'])):
     
 
 print("今日互动任务已经完成！")
-os.system("shutdown -s -t 0")
+#os.system("shutdown -s -t 0")
