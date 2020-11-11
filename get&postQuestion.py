@@ -12,12 +12,16 @@ questioncnt = 0
 answercnt = 0
 sleep = 0
 with open('cookie.txt') as f:
-    text = f.read()
-    text_json = json.loads(text)
-    cookie = text_json['cookie']
-    questioncnt = int(text_json['question_number'])
-    answercnt = int(text_json['answer_number'])
-    sleep = int(text_json['sleep'])
+    cookie = f.read()
+
+with open('settings.txt','rb') as settings:
+    text = settings.read().decode('utf-8')
+    settings_json = json.loads(text)
+    questioncnt = int(settings_json['question_number'])
+    answercnt = int(settings_json['answer_number'])
+    sleep = int(settings_json['sleep'])
+    black_list = settings_json['black_list']
+
 
 question_names = []
 def get_if_answered(qid):
@@ -82,10 +86,11 @@ def get_course():
     
     r = requests.post(url,headers=headers,data=data).text
     rjson = json.loads(r)
-    courses = {'courseId':[],'recruitId':[]}
+    courses = {'courseId':[],'recruitId':[],'courseName':[]}
     for i in range(len(rjson['result']['courseOpenDtos'])):
         courses['courseId'].append(rjson['result']['courseOpenDtos'][i]['courseId'])
         courses['recruitId'].append(rjson['result']['courseOpenDtos'][i]['recruitId'])
+        courses['courseName'].append(rjson['result']['courseOpenDtos'][i]['courseName'])
     print(courses)
     return courses
 
@@ -215,42 +220,49 @@ def post_question(courseId,recruitId,content):
     r = requests.post(url,data=ddata,headers=headers).text
     return r
 
+def check_if_black_list(courseName=''):
+    for i in range(0,len(black_list)):
+        if(courseName.find(black_list[i])!=-1):
+            return False
+    return True
 
 course_list = get_course()
 
 for j in range(0,len(course_list['courseId'])):
-    print("当前课程：",course_list['courseId'][j])
-    rid = course_list['recruitId'][j]
-    cid = course_list['courseId'][j]
-    print("现在开始提问：")
-    for i in range(0,questioncnt):
-        randa=int(random.random()*10)*10
-        question_contents = get_questions(rid,cid,randa)['content']
-        randb=int(random.random()*10)
-        qcontent = question_contents[min(randb,len(question_contents))]
-        print("当前问题：",qcontent)
-        rtmp = post_question(cid,rid,qcontent)
-        print("当前问题提问成功！")
-        time.sleep(sleep)
-    
-    print("现在开始回答：")
-    index = 0
-    cnt = 0
-    while(cnt <= answercnt):
-        questions = get_questions(rid,cid,index)['id']
-        for i in range(0,len(questions)):
+    print("当前课程：",course_list['courseName'][j])
+    if(check_if_black_list(course_list['courseName'][j])):
+        rid = course_list['recruitId'][j]
+        cid = course_list['courseId'][j]
+        print("现在开始提问：")
+        for i in range(0,questioncnt):
+            randa=int(random.random()*10)*10
+            question_contents = get_questions(rid,cid,randa)['content']
+            randb=int(random.random()*10)
+            qcontent = question_contents[min(randb,len(question_contents))]
+            print("当前问题：",qcontent)
+            rtmp = post_question(cid,rid,qcontent)
+            print("当前问题提问成功！")
+            time.sleep(sleep)
+        
+        print("现在开始回答：")
+        index = 0
+        cnt = 0
+        while(cnt <= answercnt):
+            questions = get_questions(rid,cid,index)['id']
+            for i in range(0,len(questions)):
+                if(cnt >= answercnt):
+                    break
+                if(get_if_answered(questions[i])==False):
+                    cnt += 1
+                    print("当前正在回答:",questions[i],"  now:",cnt)
+                    answer1 = get_answer(questions[i],rid,cid)
+                    a = postAnswer(answer1[0],questions[i])
+                    time.sleep(sleep)
             if(cnt >= answercnt):
                 break
-            if(get_if_answered(questions[i])==False):
-                cnt += 1
-                print("当前正在回答:",questions[i],"  now:",cnt)
-                answer1 = get_answer(questions[i],rid,cid)
-                a = postAnswer(answer1[0],questions[i])
-                time.sleep(sleep)
-        if(cnt >= answercnt):
-            break
-        index += 10
-    
+            index += 10
+    else:
+        print("当前课程位于黑名单！不执行操作！")
+        
 
 print("今日互动任务已经完成！")
-#os.system("shutdown -s -t 0")
